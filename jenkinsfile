@@ -1,0 +1,71 @@
+pipeline{
+    agent{label 'node2'}
+    tools{maven 'mvn-3.05'}
+    stages{
+        stage('PIPELINE JOB'){
+            steps{
+                echo "welcome to JENKINS PIPELINE JOB"
+            }
+        }
+        stage('Checkout'){
+            steps{
+                echo "code checkout from GIT repo"
+                git credentialsId: 'github', url: 'https://github.com/mylearningsre/mvn-b11-1.git'
+            }
+        }
+        stage('BUILD'){
+            steps{
+                echo "building the code using mvn_3.05"
+                sh 'mvn package -f pom.xml'
+            }
+        }
+        stage('DEV-DEPLOY'){
+            steps{
+                echo "DEPLOYING WAR into DEV ENVIRONMENT"
+                deploy adapters: [tomcat9(credentialsId: 'TOMCAT', path: '', url: 'http://34.125.167.161:8080/')], contextPath: null, war: 'target/macys.war'
+            }
+        }
+         stage('Approval to Deployment in STAGE env '){
+            steps{
+                echo "Taking approval from Manager to deploy WAR"
+                timeout(time: 7, unit: 'DAYS') {
+                input message: 'Do you want to deploy  WAR in STAGE env?', submitter: 'ysn4re'
+            }
+            }
+        }
+        stage('Deployment in STAGE env'){
+            steps{
+                echo "DEPLOYING WAR INTO  @STAGE ENVIRONMENT"
+                deploy adapters: [tomcat9(credentialsId: 'TOMCAT', path: '', url: 'http://34.125.161.250:8090/')], contextPath: null, war: 'target/macys.war'
+            }
+        }
+        stage('Approval to Deployment in PRE-PROD env '){
+            steps{
+                echo "Taking approval from Manager to deploy wars"
+                timeout(time: 7, unit: 'DAYS') {
+                input message: 'Do you want to deploy  WAR in PRE_PROD env?', submitter: 'ysn4re'
+            }
+            }
+        }
+        stage('DEPLOYMENt in PRE-PROD env'){
+            steps{
+                echo "DEPLOYING WAR into PRE_PROD ENVIRONMENT"
+                deploy adapters: [tomcat9(credentialsId: 'TOMCAT', path: '', url: 'http://34.125.161.250:8080/')], contextPath: null, war: 'target/macys.war'
+            }
+        }
+      stage('Approvals to NEXUS REPO'){
+            steps{
+                echo "Taking approval from Manager for Nexus Repo"
+                timeout(time: 7, unit: 'DAYS') {
+                input message: 'Do you approve to deploy war to NEXUS REPO?', submitter: 'ysn4re'
+            }
+            }
+        }
+        stage('NEXUS REPO'){
+            steps{
+                echo "calling NEXUS Certified JOB "
+                nexusArtifactUploader artifacts: [[artifactId: 'macys', classifier: '', file: 'target/macys.war', type: 'war']], credentialsId: 'NEXUS', groupId: 'com.macys', nexusUrl: '34.125.7.46:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'BATCH-11', version: '1.0-SNAPSHOT'
+        }
+        }
+    }
+}
